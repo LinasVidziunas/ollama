@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ollama/ollama/envconfig"
 	"github.com/ollama/ollama/types/model"
 )
 
@@ -103,7 +104,7 @@ func WriteManifest(name model.Name, config Layer, layers []Layer) error {
 	}
 
 	p := filepath.Join(manifests, name.Filepath())
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(p), envconfig.ModelDirectoryPermissions()); err != nil {
 		return err
 	}
 

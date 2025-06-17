@@ -14,6 +14,68 @@ import (
 	"time"
 )
 
+// ModelFilePermissions returns the model file permissions as os.FileMode (e.g., 0644).
+// The permission can be configured via the OLLAMA_MODELS_FILE_PERMISSIONS environment variable as an octal string (e.g., "664").
+// The default is 0644. Allowed values are between 0600 (rw-------) and 0666 (rw-rw-rw-), inclusive.
+// If the environment variable is invalid or out of range, a warning is logged and the default is used.
+func ModelFilePermissions() os.FileMode {
+	const (
+		environmentVariable = "OLLAMA_MODELS_FILE_PERMISSIONS"
+		defaultPermissions  = 0o644 // -rw-r--r--
+		minPerm             = 0o600 // -rw-------
+		maxPerm             = 0o666 // -rw-rw-rw-
+	)
+
+	perm := defaultPermissions
+
+	if s := strings.TrimSpace(Var(environmentVariable)); s != "" {
+		n, err := strconv.ParseInt(s, 8, 32)
+		if err != nil {
+			slog.Warn("invalid "+environmentVariable+", using default", "provided", s, "default", defaultPermissions)
+		} else {
+			candidate := int(n)
+			if candidate >= minPerm && candidate <= maxPerm {
+				perm = candidate
+			} else {
+				slog.Warn(environmentVariable+" out of range, using default", "provided", candidate, "min", minPerm, "max", maxPerm, "default", defaultPermissions)
+			}
+		}
+	}
+
+	return os.FileMode(perm)
+}
+
+// ModelDirectoryPermissions returns the model directory permissions as os.FileMode (e.g., 0755).
+// The permission can be configured via the OLLAMA_MODELS_DIRECTORY_PERMISSIONS environment variable as an octal string (e.g., "775").
+// The default is 0755. Allowed values are between 0700 (drwx------) and 0777 (drwxrwxrwx), inclusive.
+// If the environment variable is invalid or out of range, a warning is logged and the default is used.
+func ModelDirectoryPermissions() os.FileMode {
+	const (
+		environmentVariable = "OLLAMA_MODELS_DIRECTORY_PERMISSIONS"
+		defaultPermissions  = 0o755 // drwxr-xr-x
+		minPerm             = 0o700 // drwx------
+		maxPerm             = 0o777 // drwxrwxrwx
+	)
+
+	perm := defaultPermissions
+
+	if s := strings.TrimSpace(Var(environmentVariable)); s != "" {
+		n, err := strconv.ParseInt(s, 8, 32)
+		if err != nil {
+			slog.Warn("invalid "+environmentVariable+", using default", "provided", s, "default", defaultPermissions)
+		} else {
+			candidate := int(n)
+			if candidate >= minPerm && candidate <= maxPerm {
+				perm = candidate
+			} else {
+				slog.Warn(environmentVariable+" out of range, using default", "provided", candidate, "min", minPerm, "max", maxPerm, "default", defaultPermissions)
+			}
+		}
+	}
+
+	return os.FileMode(perm)
+}
+
 // Host returns the scheme and host. Host can be configured via the OLLAMA_HOST environment variable.
 // Default is scheme "http" and host "127.0.0.1:11434"
 func Host() *url.URL {
@@ -251,25 +313,27 @@ type EnvVar struct {
 
 func AsMap() map[string]EnvVar {
 	ret := map[string]EnvVar{
-		"OLLAMA_DEBUG":             {"OLLAMA_DEBUG", LogLevel(), "Show additional debug information (e.g. OLLAMA_DEBUG=1)"},
-		"OLLAMA_FLASH_ATTENTION":   {"OLLAMA_FLASH_ATTENTION", FlashAttention(), "Enabled flash attention"},
-		"OLLAMA_KV_CACHE_TYPE":     {"OLLAMA_KV_CACHE_TYPE", KvCacheType(), "Quantization type for the K/V cache (default: f16)"},
-		"OLLAMA_GPU_OVERHEAD":      {"OLLAMA_GPU_OVERHEAD", GpuOverhead(), "Reserve a portion of VRAM per GPU (bytes)"},
-		"OLLAMA_HOST":              {"OLLAMA_HOST", Host(), "IP Address for the ollama server (default 127.0.0.1:11434)"},
-		"OLLAMA_KEEP_ALIVE":        {"OLLAMA_KEEP_ALIVE", KeepAlive(), "The duration that models stay loaded in memory (default \"5m\")"},
-		"OLLAMA_LLM_LIBRARY":       {"OLLAMA_LLM_LIBRARY", LLMLibrary(), "Set LLM library to bypass autodetection"},
-		"OLLAMA_LOAD_TIMEOUT":      {"OLLAMA_LOAD_TIMEOUT", LoadTimeout(), "How long to allow model loads to stall before giving up (default \"5m\")"},
-		"OLLAMA_MAX_LOADED_MODELS": {"OLLAMA_MAX_LOADED_MODELS", MaxRunners(), "Maximum number of loaded models per GPU"},
-		"OLLAMA_MAX_QUEUE":         {"OLLAMA_MAX_QUEUE", MaxQueue(), "Maximum number of queued requests"},
-		"OLLAMA_MODELS":            {"OLLAMA_MODELS", Models(), "The path to the models directory"},
-		"OLLAMA_NOHISTORY":         {"OLLAMA_NOHISTORY", NoHistory(), "Do not preserve readline history"},
-		"OLLAMA_NOPRUNE":           {"OLLAMA_NOPRUNE", NoPrune(), "Do not prune model blobs on startup"},
-		"OLLAMA_NUM_PARALLEL":      {"OLLAMA_NUM_PARALLEL", NumParallel(), "Maximum number of parallel requests"},
-		"OLLAMA_ORIGINS":           {"OLLAMA_ORIGINS", AllowedOrigins(), "A comma separated list of allowed origins"},
-		"OLLAMA_SCHED_SPREAD":      {"OLLAMA_SCHED_SPREAD", SchedSpread(), "Always schedule model across all GPUs"},
-		"OLLAMA_MULTIUSER_CACHE":   {"OLLAMA_MULTIUSER_CACHE", MultiUserCache(), "Optimize prompt caching for multi-user scenarios"},
-		"OLLAMA_CONTEXT_LENGTH":    {"OLLAMA_CONTEXT_LENGTH", ContextLength(), "Context length to use unless otherwise specified (default: 4096)"},
-		"OLLAMA_NEW_ENGINE":        {"OLLAMA_NEW_ENGINE", NewEngine(), "Enable the new Ollama engine"},
+		"OLLAMA_DEBUG":                        {"OLLAMA_DEBUG", LogLevel(), "Show additional debug information (e.g. OLLAMA_DEBUG=1)"},
+		"OLLAMA_FLASH_ATTENTION":              {"OLLAMA_FLASH_ATTENTION", FlashAttention(), "Enabled flash attention"},
+		"OLLAMA_KV_CACHE_TYPE":                {"OLLAMA_KV_CACHE_TYPE", KvCacheType(), "Quantization type for the K/V cache (default: f16)"},
+		"OLLAMA_GPU_OVERHEAD":                 {"OLLAMA_GPU_OVERHEAD", GpuOverhead(), "Reserve a portion of VRAM per GPU (bytes)"},
+		"OLLAMA_HOST":                         {"OLLAMA_HOST", Host(), "IP Address for the ollama server (default 127.0.0.1:11434)"},
+		"OLLAMA_KEEP_ALIVE":                   {"OLLAMA_KEEP_ALIVE", KeepAlive(), "The duration that models stay loaded in memory (default \"5m\")"},
+		"OLLAMA_LLM_LIBRARY":                  {"OLLAMA_LLM_LIBRARY", LLMLibrary(), "Set LLM library to bypass autodetection"},
+		"OLLAMA_LOAD_TIMEOUT":                 {"OLLAMA_LOAD_TIMEOUT", LoadTimeout(), "How long to allow model loads to stall before giving up (default \"5m\")"},
+		"OLLAMA_MAX_LOADED_MODELS":            {"OLLAMA_MAX_LOADED_MODELS", MaxRunners(), "Maximum number of loaded models per GPU"},
+		"OLLAMA_MAX_QUEUE":                    {"OLLAMA_MAX_QUEUE", MaxQueue(), "Maximum number of queued requests"},
+		"OLLAMA_MODELS":                       {"OLLAMA_MODELS", Models(), "The path to the models directory"},
+		"OLLAMA_MODELS_FILE_PERMISSIONS":      {"OLLAMA_MODELS_FILE_PERMISSIONS", ModelFilePermissions(), "The file permissions for model blob and manifest files (default: 0644)"},
+		"OLLAMA_MODELS_DIRECTORY_PERMISSIONS": {"OLLAMA_MODELS_DIRECTORY_PERMISSIONS", ModelDirectoryPermissions(), "The directory permissions for model blob and manifest directories (default: 0755)"},
+		"OLLAMA_NOHISTORY":                    {"OLLAMA_NOHISTORY", NoHistory(), "Do not preserve readline history"},
+		"OLLAMA_NOPRUNE":                      {"OLLAMA_NOPRUNE", NoPrune(), "Do not prune model blobs on startup"},
+		"OLLAMA_NUM_PARALLEL":                 {"OLLAMA_NUM_PARALLEL", NumParallel(), "Maximum number of parallel requests"},
+		"OLLAMA_ORIGINS":                      {"OLLAMA_ORIGINS", AllowedOrigins(), "A comma separated list of allowed origins"},
+		"OLLAMA_SCHED_SPREAD":                 {"OLLAMA_SCHED_SPREAD", SchedSpread(), "Always schedule model across all GPUs"},
+		"OLLAMA_MULTIUSER_CACHE":              {"OLLAMA_MULTIUSER_CACHE", MultiUserCache(), "Optimize prompt caching for multi-user scenarios"},
+		"OLLAMA_CONTEXT_LENGTH":               {"OLLAMA_CONTEXT_LENGTH", ContextLength(), "Context length to use unless otherwise specified (default: 4096)"},
+		"OLLAMA_NEW_ENGINE":                   {"OLLAMA_NEW_ENGINE", NewEngine(), "Enable the new Ollama engine"},
 
 		// Informational
 		"HTTP_PROXY":  {"HTTP_PROXY", String("HTTP_PROXY")(), "HTTP proxy"},

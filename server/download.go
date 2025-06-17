@@ -23,6 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/ollama/ollama/api"
+	"github.com/ollama/ollama/envconfig"
 	"github.com/ollama/ollama/format"
 )
 
@@ -215,7 +216,7 @@ func (b *blobDownload) run(ctx context.Context, requestURL *url.URL, opts *regis
 	defer blobDownloadManager.Delete(b.Digest)
 	ctx, b.CancelFunc = context.WithCancel(ctx)
 
-	file, err := os.OpenFile(b.Name+"-partial", os.O_CREATE|os.O_RDWR, 0o644)
+	file, err := os.OpenFile(b.Name+"-partial", os.O_CREATE|os.O_RDWR, envconfig.ModelFilePermissions())
 	if err != nil {
 		return err
 	}
@@ -414,7 +415,7 @@ func (b *blobDownload) readPart(partName string) (*blobDownloadPart, error) {
 }
 
 func (b *blobDownload) writePart(partName string, part *blobDownloadPart) error {
-	partFile, err := os.OpenFile(partName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0o644)
+	partFile, err := os.OpenFile(partName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, envconfig.ModelFilePermissions())
 	if err != nil {
 		return err
 	}
