@@ -1562,6 +1562,8 @@ func NewCLI() *cobra.Command {
 				envVars["OLLAMA_MAX_LOADED_MODELS"],
 				envVars["OLLAMA_MAX_QUEUE"],
 				envVars["OLLAMA_MODELS"],
+				envVars["OLLAMA_MODELS_FILE_PERMISSIONS"],
+				envVars["OLLAMA_MODELS_DIRECTORY_PERMISSIONS"],
 				envVars["OLLAMA_NUM_PARALLEL"],
 				envVars["OLLAMA_NOPRUNE"],
 				envVars["OLLAMA_ORIGINS"],
